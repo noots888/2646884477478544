@@ -1891,3 +1891,49 @@ html,body,#map{height:100dvh;min-height:100%;}
     max-height:calc(100dvh - var(--safe-top) - 205px - var(--mymap-popup-bottom-stop,10px))!important;
   }
 }
+
+
+/* myMap v3.1.167: Search Distribution menu button */
+#searchQuickDistributionBtn{
+  background:linear-gradient(180deg,#fff2c7,#e7b64a)!important;
+  color:#24321e!important;
+  border-color:rgba(183,121,31,.38)!important;
+}
+
+
+/* myMap v3.1.168: search menu order and address search */
+#searchQuickAddressBtn{
+  background:linear-gradient(180deg,#d9ecff,#79b8ff)!important;
+  color:#17324d!important;
+  border-color:rgba(58,118,180,.38)!important;
+}
+.search-quick-panel{
+  max-height:calc(100dvh - var(--safe-top) - var(--mymap-popup-bottom-stop,10px) - 70px)!important;
+  overflow-y:auto!important;
+}
+.address-search-panel{
+  left:8px!important;
+  right:66px!important;
+  width:auto!important;
+  max-width:none!important;
+  min-width:0!important;
+}
+@media(max-width:420px){
+  .address-search-panel{left:7px!important;right:62px!important;}
+}
+@media(max-width:380px){
+  .address-search-panel{left:6px!important;right:58px!important;}
+}
+
+
+/* myMap v3.1.169: keep Search Distribution and Search Address plain like the other search menu buttons */
+#searchQuickDistributionBtn,
+#searchQuickAddressBtn{
+  background:linear-gradient(180deg,var(--field-card),#f1eadb)!important;
+  color:var(--field-ink)!important;
+  border-color:var(--field-line)!important;
+}
+#searchQuickDistributionBtn:active,
+#searchQuickAddressBtn:active{
+  background:#eee2c7!important;
+}
