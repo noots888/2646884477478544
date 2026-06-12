@@ -6,15 +6,15 @@
   <meta name="theme-color" content="#1f3b25">
   <meta name="application-name" content="myMap">
   <title>myMap</title>
-  <link rel="manifest" href="manifest.json?v=mymap-v3-1-166_crossings_alert_button">
+  <link rel="manifest" href="manifest.json?v=mymap-v3-1-170_address_pin_remove">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="myMap">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="icon" type="image/png" href="icons/favicon.png?v=mymap-v3-1-166_crossings_alert_button">
-  <link rel="apple-touch-icon" href="icons/icon-192.png?v=mymap-v3-1-166_crossings_alert_button">
+  <link rel="icon" type="image/png" href="icons/favicon.png?v=mymap-v3-1-170_address_pin_remove">
+  <link rel="apple-touch-icon" href="icons/icon-192.png?v=mymap-v3-1-170_address_pin_remove">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="css/lean-engine.css?v=mymap-v3-1-166_crossings_alert_button">
+  <link rel="stylesheet" href="css/lean-engine.css?v=mymap-v3-1-170_address_pin_remove">
 </head>
 <body>
   <div id="map"></div>
@@ -83,9 +83,11 @@
   </div>
 
   <section id="searchQuickPanel" class="plus-menu search-quick-panel hidden">
-    <button id="searchQuickAssetsBtn" type="button">Search Assets</button>
+    <button id="searchQuickAssetsBtn" type="button">Search Transmission</button>
     <button id="searchQuickCircuitsBtn" type="button">Show Circuits</button>
-    <button id="searchQuickConductorsBtn" type="button">Conductors</button>
+    <button id="searchQuickConductorsBtn" type="button">Search Conductors</button>
+    <button id="searchQuickDistributionBtn" type="button">Search Distribution</button>
+    <button id="searchQuickAddressBtn" type="button">Search Address</button>
   </section>
 
   <section id="toggleQuickPanel" class="plus-menu toggle-quick-panel hidden">
@@ -114,6 +116,18 @@
     <div class="panel-body">
       <div class="search-line"><input id="assetSearchInput" autocomplete="off" placeholder="Line / structure / asset"><button id="runAssetSearchBtn" class="load-btn" type="button">Search</button></div>
       <div id="assetSearchResults" class="search-results"><div class="tiny-note">Open from the magnifying glass search panel.</div></div>
+    </div>
+  </section>
+
+
+  <section id="addressSearchPanel" class="search-panel address-search-panel hidden">
+    <header class="panel-head">
+      <div><b>Search Address</b><span>Western Australia only</span></div>
+      <button id="closeAddressSearchPanel" type="button">×</button>
+    </header>
+    <div class="panel-body">
+      <div class="search-line"><input id="addressSearchInput" autocomplete="off" placeholder="Street address / suburb WA"><button id="runAddressSearchBtn" class="load-btn" type="button">Search</button></div>
+      <div id="addressSearchResults" class="search-results"><div class="tiny-note">Search WA addresses only. Internet required.</div></div>
     </div>
   </section>
 
@@ -222,21 +236,22 @@
   </section>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="js/lean-app-core.js?v=mymap-v3-1-166_crossings_alert_button"></script>
-  <script src="js/diagnostics.js?v=mymap-v3-1-166_crossings_alert_button"></script>
-  <script src="js/lean-engine-stubs.js?v=mymap-v3-1-166_crossings_alert_button"></script>
-  <script src="js/storage-engine.js?v=mymap-v3-1-166_crossings_alert_button"></script>
-  <script src="js/import-engine.js?v=mymap-v3-1-166_crossings_alert_button"></script>
-  <script src="js/conductor-data-loader.js?v=mymap-v3-1-166_crossings_alert_button"></script>
-  <script src="js/search-engine.js?v=mymap-v3-1-166_crossings_alert_button"></script>
-  <script src="js/span-weight-calculator.js?v=mymap-v3-1-166_crossings_alert_button"></script>
-  <script src="js/popup-engine.js?v=mymap-v3-1-166_crossings_alert_button"></script>
-  <script src="js/map-engine.js?v=mymap-v3-1-166_crossings_alert_button"></script>
-  <script src="js/hv-crossings-layer.js?v=mymap-v3-1-166_crossings_alert_button"></script>
-  <script src="js/lean-map-app.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/lean-app-core.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/diagnostics.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/lean-engine-stubs.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/storage-engine.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/import-engine.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/conductor-data-loader.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/search-engine.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/span-weight-calculator.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/popup-engine.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/map-engine.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/hv-crossings-layer.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/address-search.js?v=mymap-v3-1-170_address_pin_remove"></script>
+  <script src="js/lean-map-app.js?v=mymap-v3-1-170_address_pin_remove"></script>
 
   <script>
-  // myMap PWA install hook · mymap-v3-1-166_crossings_alert_button
+  // myMap PWA install hook · mymap-v3-1-170_address_pin_remove
   (function(){
     var deferredInstallPrompt=null;
     var installed=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;
@@ -257,7 +272,7 @@
       if(!('serviceWorker' in navigator))return false;
       if(!(location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1'))return false;
       try{
-        var reg=await navigator.serviceWorker.register('./service-worker.js?v=mymap-v3-1-166_crossings_alert_button',{scope:'./'});
+        var reg=await navigator.serviceWorker.register('./service-worker.js?v=mymap-v3-1-170_address_pin_remove',{scope:'./'});
         try{await reg.update();}catch(e){}
         try{await navigator.serviceWorker.ready;}catch(e){}
         swReady=true;

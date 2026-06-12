@@ -3,7 +3,7 @@
   "short_name": "myMap",
   "description": "Mobile field map reference app",
   "id": "./",
-  "start_url": "./index.html?source=pwa&v=mymap-v3-1-166_crossings_alert_button",
+  "start_url": "./index.html?source=pwa&v=mymap-v3-1-170_address_pin_remove",
   "scope": "./",
   "display": "standalone",
   "display_override": [

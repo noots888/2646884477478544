@@ -1,8 +1,8 @@
-// myMap service worker · mymap-v3-1-166_crossings_alert_button
+// myMap service worker · mymap-v3-1-170_address_pin_remove
 // Simple shell controller: no heavy install pre-cache. Shell files are cached only after they load successfully.
-const MYMAP_SW_VERSION = 'mymap-v3-1-166_crossings_alert_button';
+const MYMAP_SW_VERSION = 'mymap-v3-1-170_address_pin_remove';
 const SHELL_CACHE = 'app-shell-' + MYMAP_SW_VERSION;
-const OLD_CACHE_PATTERNS = [/^field-map-/i, /^fieldMap/i, /^myMap/i, /^mymap/i, /^app-shell-(?!mymap-v3-1-166_crossings_alert_button$)/i];
+const OLD_CACHE_PATTERNS = [/^field-map-/i, /^fieldMap/i, /^myMap/i, /^mymap/i, /^app-shell-(?!mymap-v3-1-170_address_pin_remove$)/i];
 
 self.addEventListener('install', event => {
   self.skipWaiting();
