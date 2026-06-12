@@ -6,15 +6,15 @@
   <meta name="theme-color" content="#1f3b25">
   <meta name="application-name" content="myMap">
   <title>myMap</title>
-  <link rel="manifest" href="manifest.json?v=mymap-v3-1-155_smooth_freeze_fixes">
+  <link rel="manifest" href="manifest.json?v=mymap-v3-1-166_crossings_alert_button">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="myMap">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="icon" type="image/png" href="icons/favicon.png?v=mymap-v3-1-155_smooth_freeze_fixes">
-  <link rel="apple-touch-icon" href="icons/icon-192.png?v=mymap-v3-1-155_smooth_freeze_fixes">
+  <link rel="icon" type="image/png" href="icons/favicon.png?v=mymap-v3-1-166_crossings_alert_button">
+  <link rel="apple-touch-icon" href="icons/icon-192.png?v=mymap-v3-1-166_crossings_alert_button">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="css/lean-engine.css?v=mymap-v3-1-155_smooth_freeze_fixes">
+  <link rel="stylesheet" href="css/lean-engine.css?v=mymap-v3-1-166_crossings_alert_button">
 </head>
 <body>
   <div id="map"></div>
@@ -127,7 +127,7 @@
         <button type="button" data-cat="summary" class="active">Summary</button>
         <button type="button" data-cat="import">Import</button>
         <button type="button" data-cat="files">Files</button>
-        <button type="button" data-cat="local-save">Local Save</button>
+        <button type="button" data-cat="local-save">Local</button>
         <button type="button" data-cat="app">App</button>
       </div>
       <div id="statusBody" class="data-view"></div>
@@ -222,21 +222,21 @@
   </section>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="js/lean-app-core.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
-  <script src="js/diagnostics.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
-  <script src="js/lean-engine-stubs.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
-  <script src="js/storage-engine.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
-  <script src="js/import-engine.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
-  <script src="js/conductor-data-loader.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
-  <script src="js/search-engine.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
-  <script src="js/span-weight-calculator.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
-  <script src="js/popup-engine.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
-  <script src="js/map-engine.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
-  <script src="js/hv-crossings-layer.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
-  <script src="js/lean-map-app.js?v=mymap-v3-1-155_smooth_freeze_fixes"></script>
+  <script src="js/lean-app-core.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/diagnostics.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/lean-engine-stubs.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/storage-engine.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/import-engine.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/conductor-data-loader.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/search-engine.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/span-weight-calculator.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/popup-engine.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/map-engine.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/hv-crossings-layer.js?v=mymap-v3-1-166_crossings_alert_button"></script>
+  <script src="js/lean-map-app.js?v=mymap-v3-1-166_crossings_alert_button"></script>
 
   <script>
-  // myMap PWA install hook · mymap-v3-1-155_smooth_freeze_fixes
+  // myMap PWA install hook · mymap-v3-1-166_crossings_alert_button
   (function(){
     var deferredInstallPrompt=null;
     var installed=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true;
@@ -257,7 +257,7 @@
       if(!('serviceWorker' in navigator))return false;
       if(!(location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1'))return false;
       try{
-        var reg=await navigator.serviceWorker.register('./service-worker.js?v=mymap-v3-1-155_smooth_freeze_fixes',{scope:'./'});
+        var reg=await navigator.serviceWorker.register('./service-worker.js?v=mymap-v3-1-166_crossings_alert_button',{scope:'./'});
         try{await reg.update();}catch(e){}
         try{await navigator.serviceWorker.ready;}catch(e){}
         swReady=true;
