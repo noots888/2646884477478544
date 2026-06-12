@@ -964,18 +964,75 @@
     },
     renderControls(){
       let el=document.getElementById('hvTxTogglePanel');
-      if(!el){el=document.createElement('div'); el.id='hvTxTogglePanel'; el.className='hvtx-toggle-panel hidden'; document.body.appendChild(el);}
+      if(!el){
+        el=document.createElement('div');
+        el.id='hvTxTogglePanel';
+        el.className='hvtx-toggle-panel hidden';
+        document.body.appendChild(el);
+      }
+      let alert=document.getElementById('hvTxAlertBtn');
+      if(!alert){
+        alert=document.createElement('button');
+        alert.id='hvTxAlertBtn';
+        alert.className='hvtx-alert-btn hidden';
+        alert.type='button';
+        alert.textContent='!';
+        alert.title='HV / TX crossings';
+        alert.setAttribute('aria-label','HV / TX crossings');
+        alert.addEventListener('click',(ev)=>{
+          try{ev.preventDefault();ev.stopPropagation();}catch(_e){}
+          const has=alert && !alert.classList.contains('hidden');
+          if(!has)return;
+          this.controlsOpen=!this.controlsOpen;
+          try{
+            window.LeanMapApp?.closePlusMenu?.();
+            window.LeanMapApp?.closeSearchQuickPanel?.();
+            window.LeanMapApp?.closeToggleQuickPanel?.();
+            window.LeanMapApp?.closeCircuitPicker?.();
+            window.LeanMapApp?.closeAssetSearch?.();
+            window.LeanMapApp?.closeBaseLayersPanel?.();
+            window.LeanMapApp?.closeAssetLayersPanel?.();
+            window.LeanMapApp?.closeToolsPanel?.();
+            window.LeanMapApp?.closeResetPanel?.();
+            window.LeanMapApp?.closeConductorsPanel?.();
+            document.getElementById('statusPanel')?.classList.add('hidden');
+          }catch(_e){}
+          this.renderControls();
+        });
+        document.body.appendChild(alert);
+      }
+
       const st=this.stats();
       const selectedLines=this.currentCircuitsForCounts();
       const selectedKey=selectedLines.map(compact).join('|');
-      if(!selectedKey){el.classList.add('hidden');return;}
+      const hideAll=()=>{
+        this.controlsOpen=false;
+        el.classList.add('hidden');
+        alert.classList.add('hidden');
+        alert.classList.remove('active');
+      };
+      if(!selectedKey){hideAll();return;}
       if(selectedKey&&selectedKey!==this.circuitCountLine&&!this.circuitCountPending){this.scheduleCircuitCountUpdate(selectedLines);}
-      if(!st.total&&!st.txSource){el.classList.add('hidden');return;}
-      el.classList.remove('hidden');
+      if(!st.total&&!st.txSource){hideAll();return;}
       const controlsReady=!!selectedKey;
       const pending=controlsReady&&this.circuitCountPending&&this.circuitCountLine===selectedKey;
       const detailMap=new Map((this.circuitCountDetails||[]).map(d=>[compact(d.line),d]));
       const lines=controlsReady?selectedLines:[];
+      let totalDetected=0;
+      for(const line of lines){
+        const d=detailMap.get(compact(line))||{line,dx:0,tx:0};
+        totalDetected += Number(d.dx||0)+Number(d.tx||0);
+      }
+      if(!totalDetected&&!pending){
+        totalDetected=Number(this.circuitDxCount||0)+Number(this.circuitTxCount||0);
+      }
+      if(!totalDetected&&!pending){hideAll();return;}
+
+      alert.classList.remove('hidden');
+      alert.classList.toggle('active',!!this.controlsOpen);
+      alert.title=pending?'Checking crossings…':`${Number(totalDetected||0).toLocaleString()} HV / TX crossing(s)`;
+      alert.setAttribute('aria-label',alert.title);
+
       const rowHtml=(line)=>{
         const d=detailMap.get(compact(line))||{line,dx:0,tx:0};
         const dxCount=pending?'…':Number(d.dx||0).toLocaleString();
@@ -986,6 +1043,7 @@
         return `<div class="hvtx-circuit-row" data-line="${esc(line)}"><button class="hvtx-toggle-btn ${dxActive?'active':''} ${!st.hv?'empty':''}" data-cross-type="HV" data-cross-line="${esc(line)}" type="button" title="HV crossings on ${short}"><span class="hvtx-type">HV</span><span class="hvtx-line">${short}</span><span class="hvtx-count">${dxCount}</span></button><button class="hvtx-toggle-btn ${txActive?'active':''} ${!st.txSource?'empty':''}" data-cross-type="TX" data-cross-line="${esc(line)}" type="button" title="Direct TX crossings on ${short}"><span class="hvtx-type">TX</span><span class="hvtx-line">${short}</span><span class="hvtx-count">${txCount}</span></button></div>`;
       };
       el.innerHTML=lines.length?lines.map(rowHtml).join(''):`<div class="hvtx-circuit-row"><button class="hvtx-toggle-btn empty" type="button"><span class="hvtx-type">HV</span><span class="hvtx-line">LOAD CIRCUIT</span><span class="hvtx-count">0</span></button><button class="hvtx-toggle-btn empty" type="button"><span class="hvtx-type">TX</span><span class="hvtx-line">LOAD CIRCUIT</span><span class="hvtx-count">0</span></button></div>`;
+      el.classList.toggle('hidden',!this.controlsOpen);
       el.querySelectorAll('[data-cross-type][data-cross-line]').forEach(btn=>{btn.addEventListener('click',()=>this.toggleCircuitType(btn.dataset.crossType,btn.dataset.crossLine));});
     },
     renderBadge(){this.renderControls();},

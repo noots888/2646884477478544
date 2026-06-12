@@ -2614,3 +2614,94 @@ const SearchEngine={
   }
 };
 if(typeof window!=='undefined')window.SearchEngine=SearchEngine;
+
+/* myMap v3.1.156: cancellable file-level indexing + deferred heavy path optimisation */
+(function(){
+  if(typeof SearchEngine==='undefined')return;
+  const abortCheck=function(ctx){
+    if(typeof ImportEngine!=='undefined'&&ImportEngine.cancelRequested)throw ctx.makeAbortError?.(ImportEngine.cancelReason||'Import cancelled by user')||new Error('Import cancelled');
+    ctx.assertIndexNotCancelled?.();
+  };
+  SearchEngine.indexFileRecords=async function(records=[],meta={},reason='File-level index',opts={}){
+    this.ensureIndexContainers();
+    this.indexRunning=true;
+    this.indexCancelRequested=false;
+    this.indexCancelReason='';
+    this.recoveryLineCache=new Map();
+    this.poleDetailMapBuilt=false;
+    this.poleDetailMap=new Map();
+    const list=Array.isArray(records)?records:[];
+    const total=list.length||1;
+    let indexed=0, tokenLinks=0, gpsIndexed=0, utilitySkipped=0;
+    const start=Date.now();
+    App.indexHealth=App.indexHealth||{mode:'file-level',queue:[],files:[]};
+    App.indexHealth.current={name:meta.name||meta.fileName||'current file',status:'indexing',startedAt:new Date().toISOString(),total:list.length};
+    try{
+      abortCheck(this);
+      const yieldEvery=total>50000?180:(total>15000?250:400);
+      for(let i=0;i<list.length;i++){
+        const asset=list[i];
+        if(!asset)continue;
+        try{
+          if(this.isUtilityAsset(asset)){utilitySkipped++; continue;}
+          const res=this.indexOneAsset(asset,(this.assetMap?.size||0)+i);
+          if(res){indexed++; tokenLinks+=res.tokenLinks||0; if(Number.isFinite(Number(asset.lat))&&Number.isFinite(Number(asset.lon))&&asset.kind!=='circuit')gpsIndexed++;}
+        }catch(err){Diagnostics?.log?.('Skipped asset during file index',String(err?.message||err));}
+        if(i%yieldEvery===0){
+          abortCheck(this);
+          UI?.progress?.(true,reason,`${meta.name||meta.fileName||'file'}: indexed ${i.toLocaleString()} / ${total.toLocaleString()} · tap Cancel to stop`,92+Math.min(4,Math.round((i/total)*4)));
+          await new Promise(r=>setTimeout(r,0));
+          abortCheck(this);
+        }
+      }
+      const touched=new Set();
+      for(let i=0;i<list.length;i++){
+        const a=list[i]; if(!a)continue;
+        for(const line of this.lineAliasesForAsset(a)||[]){const g=this.lineMap.get(this.compact(line)); if(g&&!touched.has(g)){g.assets.sort(this.sortByStructure); touched.add(g);}}
+        if(i%1000===0){abortCheck(this); await new Promise(r=>setTimeout(r,0));}
+      }
+      if(!opts?.deferCircuitPath){try{await this.buildCircuitPathIndexAsync(App.assets||[],reason||'Circuit path optimiser');}catch(err){if(err?.name==='AbortError')throw err;Diagnostics?.log?.('Circuit path optimiser skipped',String(err?.message||err));}}
+      this.indexStats={
+        ...(this.indexStats||{}),
+        rebuiltAt:this.indexStats?.rebuiltAt||new Date().toISOString(),
+        lastFileIndexedAt:new Date().toISOString(),
+        lastFile:meta.name||meta.fileName||'',
+        lastFileMs:Date.now()-start,
+        assetsIndexed:this.assetMap?.size||0,
+        gpsIndexed:(this.indexStats?.gpsIndexed||0)+gpsIndexed,
+        lineGroups:this.lineMap?.size||0,
+        circuitPathGroups:this.circuitPathIndex?.size||0,
+        tokenCount:this.tokenIndex?.size||0,
+        tokenLinks:(this.indexStats?.tokenLinks||0)+tokenLinks,
+        utilitySkipped:(this.indexStats?.utilitySkipped||0)+utilitySkipped,
+        spatialCells:this.spatialIndex?.size||0,
+        schema:App.schema||{},
+        mode:'file-level incremental cancellable',
+        pass2Index:this.pass2IndexVersion,
+        kindIndexCounts:Object.fromEntries(Object.entries(this.kindIndex||{}).map(([k,v])=>[k,Array.isArray(v)?v.length:0])),
+        structureMapAudit:this.structureMapDotAudit(App.assets||[])
+      };
+      return {indexed,tokenLinks,gpsIndexed,ms:Date.now()-start};
+    }finally{
+      App.indexHealth.current=null;
+      this.indexRunning=false;
+    }
+  };
+
+  const originalBuildPathAsync=SearchEngine.buildCircuitPathIndexAsync?.bind(SearchEngine);
+  SearchEngine.buildCircuitPathIndexAsync=async function(records=null,reason='Optimising transmission circuit paths'){
+    const list=records||(App.assets||[]);
+    abortCheck(this);
+    const count=Array.isArray(list)?list.length:0;
+    if(count>80000 && typeof ImportEngine!=='undefined' && ImportEngine.importRunning){
+      this.circuitPathIndex=this.circuitPathIndex||new Map();
+      this.circuitEndpointPathIndex=this.circuitEndpointPathIndex||new Map();
+      this.circuitPathStats={builtAt:new Date().toISOString(),deferred:true,reason:'deferred during bulk import',scanned:count,circuits:this.circuitPathIndex.size||0,points:0,segments:0};
+      UI?.progress?.(true,reason,'Path optimisation deferred to keep bulk import responsive',96);
+      await new Promise(r=>setTimeout(r,0));
+      abortCheck(this);
+      return this.circuitPathIndex;
+    }
+    return originalBuildPathAsync?originalBuildPathAsync(list,reason):this.buildCircuitPathIndex(list,{force:true});
+  };
+})();

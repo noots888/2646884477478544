@@ -3243,6 +3243,7 @@ const MapEngine={
     if(!arr.length){UI?.toast?.('No saved pins to save.');return;}
     const filename=`myMap-pin-drops-${new Date().toISOString().slice(0,10)}.json`;
     const json=JSON.stringify(arr,null,2);
+    const blob=new Blob([json],{type:'application/json'});
     try{
       if(window.showSaveFilePicker){
         const handle=await window.showSaveFilePicker({
@@ -3250,14 +3251,22 @@ const MapEngine={
           types:[{description:'myMap pin drops JSON',accept:{'application/json':['.json']}}]
         });
         const writable=await handle.createWritable();
-        await writable.write(new Blob([json],{type:'application/json'}));
+        await writable.write(blob);
         await writable.close();
-        UI?.toast?.('Saved pins backup written.');
+        UI?.toast?.('Saved pins file written.');
         return;
+      }
+      if(navigator.share){
+        const file=new File([blob],filename,{type:'application/json'});
+        if(!navigator.canShare||navigator.canShare({files:[file]})){
+          await navigator.share({files:[file],title:'myMap pin drops'});
+          UI?.toast?.('Choose save/share location opened.');
+          return;
+        }
       }
     }catch(e){
       if(String(e?.name||'')==='AbortError'){UI?.toast?.('Save cancelled.');return;}
-      try{console.warn('myMap save-as failed',e);}catch(_){}
+      try{console.warn('myMap save/share failed',e);}catch(_){}
     }
     this.exportSavedPinDrops();
   },
@@ -4320,7 +4329,7 @@ try{window.MapEngine=MapEngine; window.fmConnectedBtn=(btn,ev)=>MapEngine.handle
 })();
 
 
-/* myMap v3.1.155: small freeze reduction without changing UI behaviour */
+/* myMap v3.1.156: small freeze reduction without changing UI behaviour */
 (function(){
   const ME=window.MapEngine;
   if(!ME||ME.__smoothFreezePatch155)return;
@@ -4506,5 +4515,51 @@ try{window.MapEngine=MapEngine; window.fmConnectedBtn=(btn,ev)=>MapEngine.handle
       return;
     }
     try{return oldShowGps?oldShowGps.call(this):undefined;}catch(e){}
+  };
+})();
+
+
+/* myMap v3.1.159: pan asset popups above the Patrol overlay so their buttons stay reachable. */
+(function(){
+  const ME=window.MapEngine;
+  if(!ME||ME.__popupAbovePatrolV159)return;
+  ME.__popupAbovePatrolV159=true;
+  const oldPopupOptions=ME.popupOptions;
+  ME.popupOptions=function(){
+    const o=oldPopupOptions?oldPopupOptions.call(this):{};
+    let bottom=74;
+    try{
+      const p=document.getElementById('gpsPatrolPanel');
+      if(p && !p.classList.contains('hidden')){
+        const r=p.getBoundingClientRect();
+        const h=window.innerHeight||document.documentElement.clientHeight||0;
+        if(r&&r.height>30&&r.top>0&&r.top<h-40)bottom=Math.max(bottom,Math.ceil(h-r.top+16));
+      }
+    }catch(e){}
+    return Object.assign({},o,{autoPan:true,keepInView:true,closeOnClick:false,autoPanPaddingTopLeft:[18,92],autoPanPaddingBottomRight:[18,bottom]});
+  };
+  const oldRefit=ME.refitOpenPopup;
+  ME.refitOpenPopup=function(){
+    let result;
+    try{result=oldRefit?oldRefit.call(this):undefined;}catch(e){}
+    try{
+      if(!this.map)return result;
+      const popup=this.map._popup;
+      const root=popup?.getElement?.();
+      const mapEl=this.map.getContainer?.()||document.getElementById('map');
+      if(!root||!mapEl)return result;
+      const r=root.getBoundingClientRect();
+      const m=mapEl.getBoundingClientRect();
+      let stop=m.bottom-24;
+      const panel=document.getElementById('gpsPatrolPanel');
+      if(panel && !panel.classList.contains('hidden')){
+        const pr=panel.getBoundingClientRect();
+        if(pr&&pr.height>30&&pr.top>m.top+80)stop=Math.min(stop,pr.top-10);
+      }
+      let dy=0;
+      if(r.bottom>stop)dy=r.bottom-stop;
+      if(dy>0)this.map.panBy([0,dy],{animate:true,duration:0.14});
+    }catch(e){}
+    return result;
   };
 })();

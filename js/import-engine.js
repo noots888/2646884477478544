@@ -304,6 +304,11 @@ const ImportEngine={
           meta[meta.length-1].indexResult=indexRes;
           this.setIndexHealthFile(file.name,{status:'active',indexFinishedAt:new Date().toISOString(),indexResult:indexRes});
         }catch(indexErr){
+          if(indexErr?.name==='AbortError'){
+            meta[meta.length-1].indexStatus='cancelled';
+            this.setIndexHealthFile(file.name,{status:'cancelled',error:'Cancelled during indexing',indexFinishedAt:new Date().toISOString()});
+            throw indexErr;
+          }
           meta[meta.length-1].indexStatus='failed';
           this.setIndexHealthFile(file.name,{status:'failed',error:String(indexErr.message||indexErr),indexFinishedAt:new Date().toISOString()});
           Diagnostics.capture(new Error(`File-level indexing failed for ${file.name}: ${indexErr.message||indexErr}`));
@@ -324,11 +329,11 @@ const ImportEngine={
         else SearchEngine?.rebuild?.();
         for(const m of meta){ if(m&&!m.skippedUnchanged){ m.indexStatus='active'; m.indexResult={bundleRebuild:true}; this.setIndexHealthFile(m.name,{status:'active',indexFinishedAt:new Date().toISOString(),indexResult:{bundleRebuild:true}}); } }
       }
-      catch(linkErr){Diagnostics.capture(new Error('Final conductor/bundle rebuild failed: '+(linkErr.message||linkErr)));}
+      catch(linkErr){if(linkErr?.name==='AbortError')throw linkErr;Diagnostics.capture(new Error('Final conductor/bundle rebuild failed: '+(linkErr.message||linkErr)));}
     }else if(changedCoreFiles&&SearchEngine?.buildCircuitPathIndexAsync){
       UI.progress(true,'Optimising circuit paths…','Building connected-line paths once for changed imports',94);
       try{await SearchEngine.buildCircuitPathIndexAsync(merged,'Circuit path optimiser');}
-      catch(pathErr){Diagnostics?.log?.('Circuit path optimiser skipped',String(pathErr?.message||pathErr));}
+      catch(pathErr){if(pathErr?.name==='AbortError')throw pathErr;Diagnostics?.log?.('Circuit path optimiser skipped',String(pathErr?.message||pathErr));}
     }else if(skippedUnchanged&&SearchEngine?.buildReferenceIndex){
       // Refresh the lightweight reference/path indexes after a smart-skip batch.
       // This does not re-import data, and avoids the V3.1.79 state where files were loaded but reference points were not visible.
@@ -1764,3 +1769,41 @@ const ImportEngine={
 };
 if(typeof window!=='undefined')window.ImportEngine=ImportEngine;
 if(typeof self!=='undefined')self.ImportEngine=ImportEngine;
+
+
+/* myMap v3.1.156: stronger cancel + bulk import responsiveness */
+(function(){
+  if(typeof ImportEngine==='undefined')return;
+  const originalCancel=ImportEngine.cancelImport?.bind(ImportEngine);
+  ImportEngine.cancelImport=function(){
+    this.cancelRequested=true;
+    this.cancelReason='Import cancelled by user';
+    try{
+      if(typeof SearchEngine!=='undefined'){
+        SearchEngine.indexCancelRequested=true;
+        SearchEngine.indexCancelReason='Index rebuild cancelled by user';
+        if(SearchEngine.indexRunning&&SearchEngine.cancelRebuild)SearchEngine.cancelRebuild();
+      }
+    }catch(_e){}
+    try{return originalCancel?originalCancel():undefined;}catch(e){
+      try{this.currentWorker?.terminate?.();}catch(_e){}
+      try{this.currentReader?.abort?.();}catch(_e){}
+      try{this.currentStreamReader?.cancel?.(this.makeAbortError('Import cancelled.'));}catch(_e){}
+      try{this.currentReject?.(this.makeAbortError('Import cancelled.'));}catch(_e){}
+      UI?.toast?.('Cancelling import…');
+    }
+  };
+
+  const originalCompact=ImportEngine.compactImportRecords?.bind(ImportEngine);
+  ImportEngine.compactImportRecords=function(records=[],mode='normal'){
+    const list=Array.isArray(records)?records:[];
+    if(this.cancelRequested)throw this.makeAbortError(this.cancelReason||'Import cancelled');
+    // Full raw-field compaction is expensive on very large phone imports. Keep the same
+    // records instead of blocking the UI for a long single loop; storage compaction still
+    // runs when supported by the per-file save layer.
+    if(list.length>35000){
+      return {records:list,rawFieldsBefore:0,rawFieldsAfter:0,rawFieldsDropped:0,compacted:0,bulkFastPath:true};
+    }
+    return originalCompact?originalCompact(list,mode):{records:list,rawFieldsBefore:0,rawFieldsAfter:0,rawFieldsDropped:0,compacted:0};
+  };
+})();

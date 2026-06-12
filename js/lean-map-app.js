@@ -56,7 +56,7 @@ var LeanMapApp={
     try{
       if(!('serviceWorker' in navigator))return;
       if(!(location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1'))return;
-      const reg=await navigator.serviceWorker.register('./service-worker.js?v=mymap-v3-1-155_smooth_freeze_fixes',{scope:'./'}); try{await reg.update?.();}catch(e){}
+      const reg=await navigator.serviceWorker.register('./service-worker.js?v=mymap-v3-1-166_crossings_alert_button',{scope:'./'}); try{await reg.update?.();}catch(e){}
     }catch(e){}
   },
   updateReferenceToggleButtons(){
@@ -1121,7 +1121,7 @@ var LeanMapApp={
     const files=Array.isArray(App.files)?App.files:[];
     const assets=Array.isArray(App.assets)?App.assets:[];
     const stats=this.fastStats();
-    const subtitle={summary:'Speed status',import:'Import files',files:'Imported file list',app:'',assets:'Asset categories',storage:'Local storage','local-save':'Pin drops · backups'}[cat]||'Core data';
+    const subtitle={summary:'Speed status',import:'Import files',files:'Imported file list',app:'',assets:'Asset categories',storage:'Local storage','local-save':'Local saved data'}[cat]||'Core data';
     const subEl=document.getElementById('dataManagerSubtitle'); if(subEl)subEl.textContent=subtitle;
 
     if(cat==='import'){
@@ -1133,10 +1133,11 @@ var LeanMapApp={
     if(cat==='local-save'){
       const pins=MapEngine?.readSavedPinDrops?.()||[];
       const pinStatus=MapEngine?.pinDropStatusLabel?.()||'none saved';
-      const fsApi=!!window.showSaveFilePicker;
-      const localRows=`<div class="mini-row"><b>Pin drops</b><span>${pins.length.toLocaleString()} saved</span></div><div class="mini-row"><b>Saved in app</b><span>This phone/browser</span></div><div class="mini-row"><b>Backup location</b><span>${fsApi?'Choose file/location when saving':'Downloads export'}</span></div><div class="mini-row"><b>Imported files</b><span>${files.length.toLocaleString()} local file record${files.length===1?'':'s'}</span></div>`;
-      const pinActions=`<div class="data-action-grid single"><button type="button" class="data-safe-btn" data-local-show-pins="1">Show saved pins</button><button type="button" class="data-safe-btn" data-local-hide-pins="1">Hide saved pins</button><button type="button" class="data-safe-btn" data-local-save-as="1">Save pins backup as…</button><button type="button" class="data-safe-btn" data-local-export-pins="1">Export pins to Downloads</button><button type="button" class="data-danger-btn" data-local-clear-pins="1">Clear saved pins</button></div>`;
-      b.innerHTML=`<div class="data-manager-action-card"><b>Local Save</b><p>Pin drops save locally on this device. Use backup/export to choose where to keep a JSON copy outside the app.</p><small>Status: ${UI.esc(pinStatus)}</small></div>${this.sectionHtml('localSaveWhere','Where things save',localRows,'local app storage',true)}${this.sectionHtml('localSavePins','Pin drop backups',pinActions,'save or export pins',true)}<div class="tiny-note">Phone browsers may not allow a permanent folder. If the file picker is unavailable, the backup goes to Downloads.</div>`;
+      const canPick=!!window.showSaveFilePicker;
+      const canShare=!!navigator.share;
+      const localRows=`<div class="mini-row"><b>Pin drops</b><span>${pins.length.toLocaleString()} saved</span></div><div class="mini-row"><b>App storage</b><span>This phone/browser</span></div><div class="mini-row"><b>File save</b><span>${canPick?'Pick location':(canShare?'Share / save location':'Downloads')}</span></div>`;
+      const pinActions=`<div class="data-action-grid single"><button type="button" class="data-primary-action-btn" data-local-save-as="1">Choose save location</button><button type="button" class="data-safe-btn" data-local-export-pins="1">Download backup</button><button type="button" class="data-safe-btn" data-local-show-pins="1">Show pins</button><button type="button" class="data-safe-btn" data-local-hide-pins="1">Hide pins</button><button type="button" class="data-danger-btn" data-local-clear-pins="1">Clear pins</button></div>`;
+      b.innerHTML=`<div class="data-manager-action-card compact-local-card"><b>Local</b><small>${UI.esc(pinStatus)}</small></div>${this.sectionHtml('localSaveWhere','Saved',localRows,'',true)}${this.sectionHtml('localSavePins','Pins',pinActions,'',true)}`;
       return;
     }
 
@@ -1641,3 +1642,135 @@ var LeanMapApp={
   };
 })();
 window.addEventListener('DOMContentLoaded',()=>LeanMapApp.boot());
+
+
+/* myMap v3.1.166: keep right-side menu popups above the Patrol overlay */
+(function(){
+  if(window.__myMapPopupLimitV157)return;
+  window.__myMapPopupLimitV157=true;
+  let raf=0;
+  function applyPopupBottomLimit(){
+    raf=0;
+    try{
+      const root=document.documentElement;
+      const panel=document.getElementById('gpsPatrolPanel');
+      let value='calc(10px + var(--safe-bottom))';
+      if(panel && !panel.classList.contains('hidden')){
+        const r=panel.getBoundingClientRect();
+        const h=window.innerHeight||document.documentElement.clientHeight||0;
+        if(r && r.height>30 && r.top>0 && r.top<h-40){
+          value=Math.max(12,Math.ceil(h-r.top+8))+'px';
+        }
+      }
+      root.style.setProperty('--mymap-popup-bottom-stop',value);
+    }catch(e){}
+  }
+  function schedulePopupBottomLimit(){
+    if(raf)return;
+    raf=requestAnimationFrame(applyPopupBottomLimit);
+  }
+  window.myMapUpdatePopupLimits=schedulePopupBottomLimit;
+  window.addEventListener('resize',schedulePopupBottomLimit,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(schedulePopupBottomLimit,180),{passive:true});
+  document.addEventListener('click',()=>setTimeout(schedulePopupBottomLimit,80),true);
+  document.addEventListener('transitionend',schedulePopupBottomLimit,true);
+  setTimeout(schedulePopupBottomLimit,0);
+  setTimeout(schedulePopupBottomLimit,350);
+  try{
+    const hook=()=>{
+      const panel=document.getElementById('gpsPatrolPanel');
+      if(panel)new MutationObserver(schedulePopupBottomLimit).observe(panel,{attributes:true,attributeFilter:['class','style']});
+      schedulePopupBottomLimit();
+    };
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook,{once:true}); else hook();
+  }catch(e){}
+})();
+
+
+/* myMap v3.1.166: map buttons close the current popup menu, GPS excluded */
+(function(){
+  const APP=window.LeanMapApp;
+  if(!APP||APP.__mapButtonCloseMenusV158)return;
+  APP.__mapButtonCloseMenusV158=true;
+
+  APP.closeMapMenuPopups=function(){
+    try{this.closePlusMenu?.();}catch(e){}
+    try{this.closeSearchQuickPanel?.();}catch(e){}
+    try{this.closeToggleQuickPanel?.();}catch(e){}
+    try{this.closeCircuitPicker?.();}catch(e){}
+    try{this.closeAssetSearch?.();}catch(e){}
+    try{this.closeBaseLayersPanel?.();}catch(e){}
+    try{this.closeAssetLayersPanel?.();}catch(e){}
+    try{this.closeToolsPanel?.();}catch(e){}
+    try{this.closeResetPanel?.();}catch(e){}
+    try{this.closeConductorsPanel?.();}catch(e){}
+    try{document.getElementById('statusPanel')?.classList.add('hidden');}catch(e){}
+    try{
+      document.getElementById('magnifyBtn')?.classList.remove('active');
+      document.getElementById('nearbyBtn')?.classList.remove('active');
+      document.getElementById('plusBtn')?.classList.remove('active');
+    }catch(e){}
+    try{window.myMapUpdatePopupLimits?.();}catch(e){}
+  };
+
+  const oldBind=APP.bind;
+  APP.bind=function(){
+    oldBind.call(this);
+    const rebind=(id,handler)=>{
+      const old=document.getElementById(id);
+      if(!old)return null;
+      const fresh=old.cloneNode(true);
+      old.replaceWith(fresh);
+      fresh.addEventListener('click',handler);
+      return fresh;
+    };
+    rebind('magnifyBtn',()=>{
+      const p=document.getElementById('searchQuickPanel');
+      const wasOpen=!!(p&&!p.classList.contains('hidden'));
+      this.closeMapMenuPopups?.();
+      if(!wasOpen)this.openSearchQuickPanel?.();
+    });
+    rebind('nearbyBtn',()=>{
+      const p=document.getElementById('toggleQuickPanel');
+      const wasOpen=!!(p&&!p.classList.contains('hidden'));
+      this.closeMapMenuPopups?.();
+      if(!wasOpen)this.openToggleQuickPanel?.();
+    });
+    rebind('plusBtn',()=>{
+      const p=document.getElementById('plusMenu');
+      const wasOpen=!!(p&&!p.classList.contains('hidden'));
+      this.closeMapMenuPopups?.();
+      if(!wasOpen)this.togglePlusMenu?.();
+    });
+    // GPS button is deliberately not rebound here. It keeps its own behaviour and does not close menus.
+  };
+})();
+
+
+/* myMap v3.1.166: map menu close also closes HV/TX crossing menu */
+(function(){
+  const APP=window.LeanMapApp;
+  if(!APP||APP.__crossingMenuCloseV166)return;
+  APP.__crossingMenuCloseV166=true;
+  const closeCrossings=()=>{
+    try{
+      const HV=window.HVCrossingsLayer;
+      if(HV)HV.controlsOpen=false;
+      document.getElementById('hvTxTogglePanel')?.classList.add('hidden');
+      document.getElementById('hvTxAlertBtn')?.classList.remove('active');
+    }catch(e){}
+  };
+  const old=APP.closeMapMenuPopups;
+  APP.closeMapMenuPopups=function(){
+    const r=old?old.apply(this,arguments):undefined;
+    closeCrossings();
+    return r;
+  };
+  document.addEventListener('click',e=>{
+    try{
+      const t=e.target;
+      if(t?.closest?.('#hvTxAlertBtn,#hvTxTogglePanel,.lean-left-rail,.gps-patrol-panel,.leaflet-popup'))return;
+      closeCrossings();
+    }catch(_e){}
+  },true);
+})();
