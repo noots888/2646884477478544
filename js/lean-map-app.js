@@ -56,7 +56,7 @@ var LeanMapApp={
     try{
       if(!('serviceWorker' in navigator))return;
       if(!(location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1'))return;
-      const reg=await navigator.serviceWorker.register('./service-worker.js?v=mymap-v3-1-166_crossings_alert_button',{scope:'./'}); try{await reg.update?.();}catch(e){}
+      const reg=await navigator.serviceWorker.register('./service-worker.js?v=mymap-v3-1-170_address_pin_remove',{scope:'./'}); try{await reg.update?.();}catch(e){}
     }catch(e){}
   },
   updateReferenceToggleButtons(){
@@ -1644,7 +1644,7 @@ var LeanMapApp={
 window.addEventListener('DOMContentLoaded',()=>LeanMapApp.boot());
 
 
-/* myMap v3.1.166: keep right-side menu popups above the Patrol overlay */
+/* myMap v3.1.170: keep right-side menu popups above the Patrol overlay */
 (function(){
   if(window.__myMapPopupLimitV157)return;
   window.__myMapPopupLimitV157=true;
@@ -1687,7 +1687,7 @@ window.addEventListener('DOMContentLoaded',()=>LeanMapApp.boot());
 })();
 
 
-/* myMap v3.1.166: map buttons close the current popup menu, GPS excluded */
+/* myMap v3.1.170: map buttons close the current popup menu, GPS excluded */
 (function(){
   const APP=window.LeanMapApp;
   if(!APP||APP.__mapButtonCloseMenusV158)return;
@@ -1747,7 +1747,7 @@ window.addEventListener('DOMContentLoaded',()=>LeanMapApp.boot());
 })();
 
 
-/* myMap v3.1.166: map menu close also closes HV/TX crossing menu */
+/* myMap v3.1.170: map menu close also closes HV/TX crossing menu */
 (function(){
   const APP=window.LeanMapApp;
   if(!APP||APP.__crossingMenuCloseV166)return;
@@ -1771,6 +1771,272 @@ window.addEventListener('DOMContentLoaded',()=>LeanMapApp.boot());
       const t=e.target;
       if(t?.closest?.('#hvTxAlertBtn,#hvTxTogglePanel,.lean-left-rail,.gps-patrol-panel,.leaflet-popup'))return;
       closeCrossings();
+    }catch(_e){}
+  },true);
+})();
+
+
+/* myMap v3.1.170: Search Distribution under magnifying glass */
+(function(){
+  const APP=window.LeanMapApp;
+  if(!APP||APP.__searchDistributionV167)return;
+  APP.__searchDistributionV167=true;
+
+  const esc=v=>{try{return UI?.esc?UI.esc(v):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}catch(e){return String(v??'');}};
+
+  APP.isDistributionSearchAsset=function(a){
+    if(!a||typeof a!=='object')return false;
+    const kind=String(a.kind||'').toLowerCase();
+    if(kind==='substation'||kind==='terminal'||kind==='depot')return true;
+    if(kind==='dx-pole'||kind==='distribution-pole'||kind==='transformer'||kind==='streetlight'||kind==='pillar'||kind==='enclosure')return true;
+    if(/^utility-/i.test(kind))return false;
+    const raw=a.raw||{};
+    const text=[
+      kind,a.category,a.type,a.label,a.assetType,a.materialCategory,a.sourceFile,a.sourcePath,a.layer,a.line,
+      raw.kind,raw.KIND,raw.category,raw.CATEGORY,raw.type,raw.TYPE,raw.ASSET_TYPE,raw.asset_type,
+      raw.FEATURE_TYPE,raw.feature_type,raw.layer,raw.LAYER,raw.source_layer,raw.SOURCE_LAYER,
+      raw.EQUIPMENT_TYPE,raw.equipment_type,raw.EQUIP_TYPE,raw.equip_type,raw.CLASS,raw.class,
+      raw.NETWORK,raw.network,raw.SUBSTATION,raw.SUBSTATION_NAME,raw.TERMINAL,raw.TERMINAL_NAME,raw.DEPOT_NAME,
+      raw.SEARCH_FIELD,raw.NAME,raw.name,raw.DESCRIPTION,raw.description
+    ].map(v=>String(v||'')).join(' ').toUpperCase();
+    if(/SUBSTATION|SUBSTN|TERMINAL|SWITCHYARD|DEPOT|\bZONE\s*SUB\b/.test(text))return true;
+    if(/DISTRIBUTION|DIST\b|DX\b|DISTRIBUTION[_\s-]*POLE|DX[_\s-]*POLE|TRANSFORMER|TX\b|PILLAR|ENCLOSURE|STREET\s*LIGHT|STREETLIGHT|SERVICE\s*PILLAR|MINI\s*PILLAR|LV\s*PILLAR|HV\s*CABLE|UNDERGROUND\s*HV|UG\s*HV|CABLE\s*PIT|DISTRIBUTION\s*ASSET/.test(text))return true;
+    // Keep miscellaneous transmission structures out of Distribution search.
+    if(kind==='structure'||kind==='circuit'||(SearchEngine?.lineRefsForAsset?.(a,true)||[]).length)return false;
+    return false;
+  };
+
+  APP.setAssetSearchMode=function(mode='assets'){
+    this.assetSearchMode=(mode==='distribution')?'distribution':'assets';
+    const panel=document.getElementById('assetSearchPanel');
+    const title=panel?.querySelector?.('.panel-head b');
+    const sub=panel?.querySelector?.('.panel-head span');
+    const input=document.getElementById('assetSearchInput');
+    const box=document.getElementById('assetSearchResults');
+    if(this.assetSearchMode==='distribution'){
+      if(title)title.textContent='Search Distribution';
+      if(sub)sub.textContent='Dx assets · depots · substations';
+      if(input)input.placeholder='Pole / transformer / pillar';
+      if(box)box.innerHTML='<div class="tiny-note">Distribution only: poles, transformers, pillars/enclosures, streetlights, depots, substations and terminals.</div>';
+    }else{
+      if(title)title.textContent='Asset search';
+      if(sub)sub.textContent='Search saved assets';
+      if(input)input.placeholder='Line / structure / asset';
+      if(box)box.innerHTML='<div class="tiny-note">Type a structure, circuit, substation, depot, transformer, or asset name.</div>';
+    }
+  };
+
+  APP.openAssetSearch=function(mode='assets'){
+    this.assetSearchMode=(mode==='distribution')?'distribution':'assets';
+    try{
+      this.closePlusMenu?.();
+      this.closeSearchQuickPanel?.();
+      this.closeToggleQuickPanel?.();
+      this.closeCircuitPicker?.();
+      this.closeToolsPanel?.();
+      this.closeResetPanel?.();
+      this.closeConductorsPanel?.();
+      this.closeBaseLayersPanel?.();
+      this.closeAssetLayersPanel?.();
+      document.getElementById('statusPanel')?.classList.add('hidden');
+    }catch(e){}
+    document.getElementById('assetSearchPanel')?.classList.remove('hidden');
+    this.setAssetSearchMode(this.assetSearchMode);
+    setTimeout(()=>document.getElementById('assetSearchInput')?.focus(),30);
+  };
+
+  APP.runAssetSearch=function(){
+    const q=document.getElementById('assetSearchInput')?.value||'';
+    const box=document.getElementById('assetSearchResults'); if(!box)return;
+    const distribution=this.assetSearchMode==='distribution';
+    if(!q.trim()){
+      box.innerHTML=distribution
+        ? '<div class="tiny-note">Search distribution poles, transformers, pillars/enclosures, streetlights, depots, substations and terminals.</div>'
+        : '<div class="tiny-note">Type a structure, circuit, substation, depot, transformer, or asset name.</div>';
+      return;
+    }
+    const opts=distribution
+      ? {scopeHint:{transmission:false,dxPoles:true,transformers:true,misc:true},resultFilter:(r)=>r?.type==='asset'&&this.isDistributionSearchAsset(r.asset)}
+      : {scopeHint:{transmission:true,dxPoles:true,transformers:true,misc:true}};
+    const rows=SearchEngine.search(q,distribution?35:25,opts);
+    if(!rows.length){
+      box.innerHTML=distribution?'<div class="tiny-note">No distribution results.</div>':'<div class="tiny-note">No results.</div>';
+      return;
+    }
+    box.innerHTML=rows.map((r,i)=>{
+      const kind=r.kind||r.asset?.kind||'asset';
+      const label=distribution?`${r.subtitle||kind}`:(r.subtitle||kind);
+      return `<div class="result-card"><b>${esc(r.title||r.line||'Result')}</b><span>${esc(label)}</span><button type="button" data-i="${i}">Map</button></div>`;
+    }).join('');
+    box.querySelectorAll('button[data-i]').forEach(btn=>btn.addEventListener('click',async()=>{
+      const r=rows[Number(btn.dataset.i)];
+      this.closeAssetSearch();
+      try{
+        if(r.type==='circuit'||r.line)await MapEngine.showCircuit(r.line);
+        else if(r.asset)MapEngine.showAsset(r.asset);
+        UI.refreshCounts();
+      }catch(err){Diagnostics.capture(err);UI.toast('Map result failed.');}
+    }));
+  };
+
+  const oldBind=APP.bind;
+  APP.bind=function(){
+    oldBind.call(this);
+    const btn=document.getElementById('searchQuickDistributionBtn');
+    if(btn&&!btn.__distBound){
+      btn.__distBound=true;
+      btn.addEventListener('click',()=>{this.closeSearchQuickPanel?.();this.openAssetSearch?.('distribution');});
+    }
+    const assetBtn=document.getElementById('searchQuickAssetsBtn');
+    if(assetBtn&&!assetBtn.__assetModeBound){
+      assetBtn.__assetModeBound=true;
+      assetBtn.addEventListener('click',()=>{this.closeSearchQuickPanel?.();this.openAssetSearch?.('assets');});
+    }
+  };
+})();
+
+
+/* myMap v3.1.170: final search menu order + transmission/distribution/address modes */
+(function(){
+  const APP=window.LeanMapApp;
+  if(!APP||APP.__searchMenuFinalV168)return;
+  APP.__searchMenuFinalV168=true;
+
+  const esc=v=>{try{return UI?.esc?UI.esc(v):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}catch(e){return String(v??'');}};
+
+  APP.isTransmissionSearchAsset=function(a){
+    if(!a||typeof a!=='object')return false;
+    const kind=String(a.kind||'').toLowerCase();
+    if(kind==='substation'||kind==='terminal'||kind==='depot')return true;
+    if(kind==='dx-pole'||kind==='distribution-pole'||kind==='transformer'||kind==='streetlight'||kind==='pillar'||kind==='enclosure'||/^utility-/i.test(kind))return false;
+    if(kind==='structure'||kind==='tower'||kind==='pole'||kind==='transmission-pole'||kind==='transmission-tower')return true;
+    if((SearchEngine?.lineRefsForAsset?.(a,true)||[]).length)return true;
+    const raw=a.raw||{};
+    const text=[kind,a.category,a.type,a.label,a.sourceFile,a.sourcePath,a.line,raw.TYPE,raw.type,raw.ASSET_TYPE,raw.asset_type,raw.FEATURE_TYPE,raw.feature_type,raw.LAYER,raw.layer,raw.NETWORK,raw.network].map(v=>String(v||'')).join(' ').toUpperCase();
+    if(/DISTRIBUTION|DIST\b|DX\b|TRANSFORMER|PILLAR|ENCLOSURE|STREET\s*LIGHT|STREETLIGHT|SERVICE\s*PILLAR|LV\s*PILLAR/.test(text))return false;
+    return /TRANSMISSION|TOWER|STRUCTURE|POLE|CIRCUIT|LINE/.test(text);
+  };
+
+  const oldSetMode=APP.setAssetSearchMode;
+  APP.setAssetSearchMode=function(mode='transmission'){
+    this.assetSearchMode=(mode==='distribution')?'distribution':(mode==='assets'?'transmission':(mode==='transmission'?'transmission':'transmission'));
+    const panel=document.getElementById('assetSearchPanel');
+    const title=panel?.querySelector?.('.panel-head b');
+    const sub=panel?.querySelector?.('.panel-head span');
+    const input=document.getElementById('assetSearchInput');
+    const box=document.getElementById('assetSearchResults');
+    if(this.assetSearchMode==='distribution'){
+      if(title)title.textContent='Search Distribution';
+      if(sub)sub.textContent='Dx assets · depots · substations';
+      if(input)input.placeholder='Pole / transformer / pillar';
+      if(box)box.innerHTML='<div class="tiny-note">Distribution only: poles, transformers, pillars/enclosures, streetlights, depots, substations and terminals.</div>';
+      return;
+    }
+    if(title)title.textContent='Search Transmission';
+    if(sub)sub.textContent='Transmission assets only';
+    if(input)input.placeholder='Line / structure / tower';
+    if(box)box.innerHTML='<div class="tiny-note">Search transmission poles/towers plus depots, substations and terminals. Distribution assets are excluded.</div>';
+  };
+
+  APP.openAssetSearch=function(mode='transmission'){
+    this.assetSearchMode=(mode==='distribution')?'distribution':'transmission';
+    try{
+      this.closePlusMenu?.();
+      this.closeSearchQuickPanel?.();
+      this.closeToggleQuickPanel?.();
+      this.closeCircuitPicker?.();
+      this.closeToolsPanel?.();
+      this.closeResetPanel?.();
+      this.closeConductorsPanel?.();
+      this.closeBaseLayersPanel?.();
+      this.closeAssetLayersPanel?.();
+      window.AddressSearch?.close?.();
+      document.getElementById('statusPanel')?.classList.add('hidden');
+      document.getElementById('hvTxTogglePanel')?.classList.add('hidden');
+      document.getElementById('hvTxAlertBtn')?.classList.remove('active');
+      if(window.HVCrossingsLayer)window.HVCrossingsLayer.controlsOpen=false;
+    }catch(e){}
+    document.getElementById('assetSearchPanel')?.classList.remove('hidden');
+    this.setAssetSearchMode(this.assetSearchMode);
+    setTimeout(()=>document.getElementById('assetSearchInput')?.focus(),30);
+  };
+
+  APP.runAssetSearch=function(){
+    const q=document.getElementById('assetSearchInput')?.value||'';
+    const box=document.getElementById('assetSearchResults'); if(!box)return;
+    const distribution=this.assetSearchMode==='distribution';
+    const transmission=!distribution;
+    if(!q.trim()){
+      box.innerHTML=distribution
+        ? '<div class="tiny-note">Search distribution poles, transformers, pillars/enclosures, streetlights, depots, substations and terminals.</div>'
+        : '<div class="tiny-note">Search transmission poles/towers plus depots, substations and terminals. Distribution assets are excluded.</div>';
+      return;
+    }
+    const opts=distribution
+      ? {scopeHint:{transmission:false,dxPoles:true,transformers:true,misc:true},resultFilter:(r)=>r?.type==='asset'&&this.isDistributionSearchAsset?.(r.asset)}
+      : {scopeHint:{transmission:true,dxPoles:false,transformers:false,misc:false},resultFilter:(r)=>r?.type==='asset'&&this.isTransmissionSearchAsset?.(r.asset)};
+    const rows=SearchEngine.search(q,35,opts);
+    if(!rows.length){
+      box.innerHTML=distribution?'<div class="tiny-note">No distribution results.</div>':'<div class="tiny-note">No transmission results.</div>';
+      return;
+    }
+    box.innerHTML=rows.map((r,i)=>`<div class="result-card"><b>${esc(r.title||r.line||'Result')}</b><span>${esc(r.subtitle||r.kind||'')}</span><button type="button" data-i="${i}">Map</button></div>`).join('');
+    box.querySelectorAll('button[data-i]').forEach(btn=>btn.addEventListener('click',async()=>{
+      const r=rows[Number(btn.dataset.i)];
+      this.closeAssetSearch();
+      try{
+        if(r.type==='circuit'||r.line)await MapEngine.showCircuit(r.line);
+        else if(r.asset)MapEngine.showAsset(r.asset);
+        UI.refreshCounts();
+      }catch(err){Diagnostics.capture(err);UI.toast('Map result failed.');}
+    }));
+  };
+
+  const oldCloseMapMenu=APP.closeMapMenuPopups;
+  APP.closeMapMenuPopups=function(){
+    const out=oldCloseMapMenu?oldCloseMapMenu.apply(this,arguments):undefined;
+    try{window.AddressSearch?.close?.();}catch(e){}
+    return out;
+  };
+
+  const oldBind=APP.bind;
+  APP.bind=function(){
+    oldBind.call(this);
+    const setText=(id,text)=>{const b=document.getElementById(id);if(b)b.textContent=text;};
+    setText('searchQuickAssetsBtn','Search Transmission');
+    setText('searchQuickCircuitsBtn','Show Circuits');
+    setText('searchQuickConductorsBtn','Search Conductors');
+    setText('searchQuickDistributionBtn','Search Distribution');
+    setText('searchQuickAddressBtn','Search Address');
+
+    const rebind=(id,handler)=>{
+      const old=document.getElementById(id);
+      if(!old)return null;
+      const fresh=old.cloneNode(true);
+      old.replaceWith(fresh);
+      fresh.addEventListener('click',handler);
+      return fresh;
+    };
+    rebind('searchQuickAssetsBtn',()=>{this.closeSearchQuickPanel?.();this.openAssetSearch?.('transmission');});
+    rebind('searchQuickCircuitsBtn',()=>{this.closeSearchQuickPanel?.();this.openCircuitPicker?.();});
+    rebind('searchQuickConductorsBtn',()=>{this.closeSearchQuickPanel?.();this.openConductorsPanel?.();});
+    rebind('searchQuickDistributionBtn',()=>{this.closeSearchQuickPanel?.();this.openAssetSearch?.('distribution');});
+    rebind('searchQuickAddressBtn',()=>{this.closeSearchQuickPanel?.();window.AddressSearch?.open?.();});
+  };
+})();
+
+
+/* myMap v3.1.170: Clear Map Display also removes address search pin */
+(function(){
+  const APP=window.LeanMapApp;
+  if(!APP||APP.__addressClearMapV170)return;
+  APP.__addressClearMapV170=true;
+  const clearAddressPin=()=>{try{window.AddressSearch?.clear?.();}catch(e){}};
+  document.addEventListener('click',e=>{
+    try{
+      if(e.target?.closest?.('#clearMapDisplayBtn,button[data-clear-display-map]')){
+        setTimeout(clearAddressPin,0);
+      }
     }catch(_e){}
   },true);
 })();

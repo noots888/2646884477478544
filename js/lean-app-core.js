@@ -1,6 +1,6 @@
 var App={
-  version:'mymap-v3-1-166_crossings_alert_button',
-  versionShort:'myMap v3.1.166' ,
+  version:'mymap-v3-1-170_address_pin_remove',
+  versionShort:'myMap v3.1.170' ,
   baseLock:{name:'myMap',intent:'Builds connected circuit paths from exact imported line/nameplate references, not guessed route stubs or hardcoded data.'},
   schema:{parser:'map-app-v3-1-4-parser-v13-material-category-v1',database:'file-chunk-v2',searchIndex:'pass10-reference-recovery-v2-polepath-only',spatialIndex:'grid-v1'},
   assets:[],files:[],utilityAssets:[],utilityLoaded:false,utilityLoadKey:'',lastImport:null,drawnMarkers:0,selectedAsset:null,safeMode:false,buildInfo:null,dbMeta:null,dbNeedsRebuild:false,indexHealth:{mode:'file-level',queue:[],files:[],current:null,lastFullRebuild:null},
